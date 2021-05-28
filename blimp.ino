@@ -47,8 +47,14 @@ int verticalSpeed = 0;
 //Bluetooth app setup
 int update_interval=100; // time interval in ms for updating panel indicators 
 unsigned long last_time=0; // time of last update
-char data_in; // data received from serial link
-int pad_x,pad_y; // Received Pad X and Y Values
+bool connectedFlag = false;
+int timeRemaining = 10;
+int fuelRemaining = 100;
+
+//Keyed Entry
+char dataIn;
+String passkey = "";
+String code = "1234";
 
 
 
@@ -135,16 +141,55 @@ void setup() {
   ledcAttachPin(forward_left_enablePin, forward_left_pwmChannel);
 
   //  bluetooth app setup
-  Serial.println("*.kwl");
-  Serial.println("clear_panel()");
-  Serial.println("set_grid_size(17,8)");
-  Serial.println("add_free_pad(13,4,0,100,0,100,R,)");
-  Serial.println("add_free_pad(1,4,0,100,0,0,L,)");
-  Serial.println("set_panel_notes(,,,)");
-  Serial.println("run()");
-  Serial.println("*");
+  while(!connectedFlag)
+{
+  SerialBT.println("*.kwl");
+  SerialBT.println("clear_panel()");
+  SerialBT.println("set_grid_size(17,8)");
+  SerialBT.println("add_text(8,3,xlarge,C,Please enter the flight code:,245,240,245,)");
+  SerialBT.println("add_send_box(6,5,5,,C,E)");
+  SerialBT.println("set_panel_notes(-,,,)");
+  SerialBT.println("run()");
+  SerialBT.println("*");
+  delay(1000);
+  if(SerialBT.available())
+  {
+    while(!passkey.equals(code))
+    {
+      dataIn = SerialBT.read();
+     
+      if(dataIn == 'C')
+      {
+        passkey = "";
+        while(dataIn != 'E')
+        {
+          if(SerialBT.available())
+          {
+            dataIn = SerialBT.read();
+            Serial.println(dataIn);
+            if(dataIn != 'E') passkey += dataIn;
+          }
+        }
+      }
+    }
 
-
+    connectedFlag = true;
+    SerialBT.println("*.kwl");
+    SerialBT.println("clear_panel()");
+    SerialBT.println("set_grid_size(17,8)");
+    SerialBT.println("add_text(3,1,xlarge,L,  Time,245,240,245,)");
+    SerialBT.println("add_text(12,1,xlarge,L,  Fuel,245,240,245,)");
+    SerialBT.println("add_free_pad(13,4,0,100,0,100,R,)");
+    SerialBT.println("add_free_pad(1,4,0,100,0,0,L,)");
+    SerialBT.println("add_gauge(10,2,4,0,100,0,F,,,10,5)");
+    SerialBT.println("add_gauge(1,2,4,0,10,0,T,,,10,5)");
+    SerialBT.println("set_panel_notes(,,,)");
+    SerialBT.println("run()");
+    SerialBT.println("*");
+    Serial.println("Setup complete");
+    delay(1000);
+  }
+}
 
 
   
