@@ -62,26 +62,6 @@ const int foward_left_input2 = 4;
 const int forward_left_pwmChannel = 1;
 
 
-
-//Pin numbers for vertical forward motor
-const int vertical_forward_enablePin = 5;
-const int vertical_forward_input1 = 18;
-const int vertical_forward_input2 = 19;
-const int vertical_forward_pwmChannel = 2;
-
-
-
-
-//pin numberfs for vertical rear motor
-const int vertical_rear_enablePin = 34;
-const int vertical_rear_input1 = 35;
-const int vertical_rear_input2 = 32;
-const int vertical_rear_pwmChannel = 3;
-
-
-
-
-
 // Setting PWM properties
 const int freq = 30000;
 const int resolution = 8;
@@ -107,30 +87,9 @@ int pad_x,pad_y; // Received Pad X and Y Values
 //horizontalSpeed is the forward velocity of the blimp, an integer from -255-255
 //turn is the amount the vehichle will turn -255-255
 void moveBlimpHorizontal(int horizontalSpeed, int turn) {
-//  Serial.println("speed");
-//  Serial.println(horizontalSpeed);
-//  Serial.println("turn");
-//  Serial.println(turn);
 
   int righthorizontalSpeed = horizontalSpeed + turn;
   int lefthorizontalSpeed = horizontalSpeed - turn;
-  if(lefthorizontalSpeed > 255) {
-    lefthorizontalSpeed = 255;
-  }
-  if(righthorizontalSpeed > 255) {
-    righthorizontalSpeed = 255;
-  }
-  if(lefthorizontalSpeed < -255) {
-    lefthorizontalSpeed = -255;
-  }
-    if(righthorizontalSpeed < -255) {
-    righthorizontalSpeed = -255;
-  }
-//  Serial.println("right speed");
-//  Serial.println(righthorizontalSpeed);
-//  Serial.println("left speed");
-//  Serial.println(lefthorizontalSpeed);
-
   
   if(righthorizontalSpeed < 0 ) {
     digitalWrite(foward_right_input1,HIGH);
@@ -158,13 +117,9 @@ void moveBlimpHorizontal(int horizontalSpeed, int turn) {
    }
 
   //if the horizontalSpeed of both motors is 0 disable the motors
-  if(righthorizontalSpeed == 0) {
+  if(righthorizontalSpeed == 0 && lefthorizontalSpeed == 0) {
     digitalWrite(foward_right_input1,LOW);
     digitalWrite(foward_right_input2,LOW);
-    
-  }
-
-  if(lefthorizontalSpeed == 0) {
     digitalWrite(foward_left_input1,LOW);
     digitalWrite(foward_left_input2,LOW);
   }
@@ -172,31 +127,15 @@ void moveBlimpHorizontal(int horizontalSpeed, int turn) {
 
 
 void moveBlimpVertical(int verticalSpeed) {
-  Serial.println(verticalSpeed);
   if(verticalSpeed > 0) {
-    digitalWrite(vertical_forward_input1,LOW);
-    digitalWrite(vertical_forward_input2,HIGH);
-    ledcWrite(vertical_forward_pwmChannel, verticalSpeed);
-    digitalWrite(vertical_rear_input1,LOW);
-    digitalWrite(vertical_rear_input2,HIGH);
-    ledcWrite(vertical_rear_pwmChannel, verticalSpeed);
+    //Move up
   }
   else if(verticalSpeed < 0) {
-    digitalWrite(vertical_forward_input1,HIGH);
-    digitalWrite(vertical_forward_input2,LOW);
-    ledcWrite(vertical_forward_pwmChannel, verticalSpeed);
-    digitalWrite(vertical_rear_input1,HIGH);
-    digitalWrite(vertical_rear_input2,LOW);
-    ledcWrite(vertical_rear_pwmChannel, verticalSpeed);
+    //move down
   }
   
   else {
-    digitalWrite(vertical_forward_input1,LOW);
-    digitalWrite(vertical_forward_input2,HIGH);
-
-    digitalWrite(vertical_rear_input1,LOW);
-    digitalWrite(vertical_rear_input2,HIGH);
-
+    //disable motors
   }
 }
 
@@ -204,7 +143,7 @@ void moveBlimpVertical(int verticalSpeed) {
 void setup() {
   Serial.begin(115200);
 
-  SerialBT.begin("Blimp"); //Bluetooth device name
+  SerialBT.begin("ESP32test"); //Bluetooth device name
   Serial.println("The device started, now you can pair it with bluetooth!");
 
 
@@ -216,31 +155,14 @@ void setup() {
   pinMode(foward_left_input1,OUTPUT);
   pinMode(foward_left_input2,OUTPUT);
 
-  pinMode(vertical_forward_enablePin,OUTPUT);
-  pinMode(vertical_forward_input1,OUTPUT);
-  pinMode(vertical_forward_input2,OUTPUT);
-
-  pinMode(vertical_rear_enablePin,OUTPUT);
-  pinMode(vertical_rear_input1,OUTPUT);
-  pinMode(vertical_rear_input2,OUTPUT);
-
 
     // configure LED PWM functionalitites
   ledcSetup(forward_right_pwmChannel, freq, resolution);
   ledcSetup(forward_left_pwmChannel, freq, resolution);
-  ledcSetup(vertical_forward_pwmChannel, freq, resolution);
-  ledcSetup(vertical_rear_pwmChannel, freq, resolution);
-
-  
   
   // attach the channel to the GPIO to be controlled
   ledcAttachPin(forward_right_enablePin, forward_right_pwmChannel);
   ledcAttachPin(forward_left_enablePin, forward_left_pwmChannel);
-  ledcAttachPin(vertical_forward_enablePin, vertical_forward_pwmChannel);
-  ledcAttachPin(vertical_rear_enablePin, vertical_rear_pwmChannel);
-
-
-  
 
   //  bluetooth app setup
   Serial.println("*.kwl");
