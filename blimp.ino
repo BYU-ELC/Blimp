@@ -22,7 +22,7 @@ BluetoothSerial SerialBT;
 
 //Pin numbers for forward facing right motor
 const int forward_right_enablePin = 2;
-const int foward_right_input1 = 15;
+const int foward_right_input1 = 33;
 const int foward_right_input2 = 0;
 const int forward_right_pwmChannel = 0;
 
