@@ -7,12 +7,43 @@
 
 #include "BluetoothSerial.h"
 
+#include "I2Cdev.h"
+#include "MPU6050.h"
 #include "string.h"
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
 #endif
+
+// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
+// is used in I2Cdev.h
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include "Wire.h"
+#endif
+
+// class default I2C address is 0x68
+// specific I2C addresses may be passed as a parameter here
+// AD0 low = 0x68 (default for InvenSense evaluation board)
+// AD0 high = 0x69
+MPU6050 accelgyro;
+//MPU6050 accelgyro(0x69); // <-- use for AD0 high
+
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
+
+
+// uncomment "OUTPUT_READABLE_ACCELGYRO" if you want to see a tab-separated
+// list of the accel X/Y/Z and then gyro X/Y/Z values in decimal. Easy to read,
+// not so easy to parse, and slow(er) over UART.
+#define OUTPUT_READABLE_ACCELGYRO
+
+// uncomment "OUTPUT_BINARY_ACCELGYRO" to send all 6 axes of data as 16-bit
+// binary, one right after the other. This is very fast (as fast as possible
+// without compression or data loss), and easy to parse, but impossible to read
+// for a human.
+//#define OUTPUT_BINARY_ACCELGYRO
 
 BluetoothSerial SerialBT;
 
@@ -55,6 +86,8 @@ int fuelRemaining = 100;
 char dataIn;
 String passkey = "";
 String code = "1234";
+char data_in; // data received from serial link
+int pad_x,pad_y; // Received Pad X and Y Values
 
 
 
@@ -192,6 +225,38 @@ void setup() {
 }
 
 
+  Serial.println("*.kwl");
+  Serial.println("clear_panel()");
+  Serial.println("set_grid_size(17,8)");
+  Serial.println("add_free_pad(13,4,0,100,0,100,R,)");
+  Serial.println("add_free_pad(1,4,0,100,0,0,L,)");
+  Serial.println("set_panel_notes(,,,)");
+  Serial.println("run()");
+  Serial.println("*");
+
+
+// join I2C bus (I2Cdev library doesn't do this automatically)
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin();
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+  #endif
+
+
+// initialize device
+  Serial.println("Initializing I2C devices...");
+  accelgyro.initialize();
+
+// verify connection
+  Serial.println("Testing device connections...");
+  Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+
+  accelgyro.setXAccelOffset(473);
+  accelgyro.setYAccelOffset(-3973);
+  accelgyro.setZAccelOffset(1325);
+  accelgyro.setXGyroOffset(142);
+  accelgyro.setYGyroOffset(12);
+  accelgyro.setZGyroOffset(26);
   
   // testing
   Serial.print("Testing DC Motor...");
@@ -262,5 +327,38 @@ void loop() {
 //  }
   moveBlimpHorizontal(horizontalSpeed,turn);
   moveBlimpVertical(verticalSpeed);
+
+
+// read raw accel/gyro measurements from device
+  accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+// these methods (and a few others) are also available
+  //accelgyro.getAcceleration(&ax, &ay, &az);
+  //accelgyro.getRotation(&gx, &gy, &gz);
+  float axg,ayg,azg;
+
+
+  #ifdef OUTPUT_READABLE_ACCELGYRO
+// display tab-separated accel/gyro x/y/z values
+    axg = (5.9814*pow(10,-4)) * ax + 2.1984*pow(10,-16);
+    ayg = (5.9814*pow(10,-4)) * ay + 2.1984*pow(10,-16);
+    azg = (5.9814*pow(10,-4)) * az + 2.1984*pow(10,-16);
+    Serial.print("a/g:\t");
+    Serial.print(axg); Serial.print("\t");
+    Serial.print(ayg); Serial.print("\t");
+    Serial.print(azg); Serial.print("\t");
+    Serial.print(gx); Serial.print("\t");
+    Serial.print(gy); Serial.print("\t");
+    Serial.println(gz);
+  #endif
+
+  #ifdef OUTPUT_BINARY_ACCELGYRO
+    Serial.write((uint8_t)(ax >> 8)); Serial.write((uint8_t)(ax & 0xFF));
+    Serial.write((uint8_t)(ay >> 8)); Serial.write((uint8_t)(ay & 0xFF));
+    Serial.write((uint8_t)(az >> 8)); Serial.write((uint8_t)(az & 0xFF));
+    Serial.write((uint8_t)(gx >> 8)); Serial.write((uint8_t)(gx & 0xFF));
+    Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
+    Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
+  #endif
 //  delay(20);
 }
