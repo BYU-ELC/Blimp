@@ -259,6 +259,7 @@ void setup() {
   SerialBT.println("set_grid_size(17,8)");
   SerialBT.println("add_text(8,3,xlarge,C,Please enter the flight code:,245,240,245,)");
   SerialBT.println("add_send_box(6,5,5,,C,E)");
+  SerialBT.println("add_accelerometer(5,5,1,100,A,*)");
   SerialBT.println("set_panel_notes(-,,,)");
   SerialBT.println("run()");
   SerialBT.println("*");
