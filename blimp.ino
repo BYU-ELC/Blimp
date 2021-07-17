@@ -21,35 +21,37 @@ BluetoothSerial SerialBT;
 //Each motor has three GPIO pins, input1 and input2 control the direction the motor is spinning and enable is a PWM pin that controls horizontalSpeed
 
 //Pin numbers for forward facing right motor
-const int forward_right_enablePin = 2;
+const int forward_right_enablePin = 16;
 const int foward_right_input1 = 33;
-const int foward_right_input2 = 0;
+const int foward_right_input2 = 15;
 const int forward_right_pwmChannel = 0;
 
 //Pin numbers for forward facing left motor
-const int forward_left_enablePin = 16;
+const int forward_left_enablePin = 13;
 const int foward_left_input1 = 17;
 const int foward_left_input2 = 4;
 const int forward_left_pwmChannel = 1;
 
 
-
 //Pin numbers for vertical forward motor
-const int vertical_forward_enablePin = 5;
+const int vertical_forward_enablePin = 14;
 const int vertical_forward_input1 = 18;
 const int vertical_forward_input2 = 19;
 const int vertical_forward_pwmChannel = 2;
 
 
-
-
 //pin numberfs for vertical rear motor
-const int vertical_rear_enablePin = 34;
-const int vertical_rear_input1 = 35;
+const int vertical_rear_enablePin = 27;
+const int vertical_rear_input1 = 12;
 const int vertical_rear_input2 = 32;
 const int vertical_rear_pwmChannel = 3;
 
+//pin numbers for voltage detection
+const int battery_voltage = 26;
+int voltage = 0;
+int voltageCounter = 0;
 
+//pin numbers for accelerometer data
 
 
 
@@ -201,10 +203,10 @@ void moveBlimpVertical(int verticalSpeed) {
   
   else {
     digitalWrite(vertical_forward_input1,LOW);
-    digitalWrite(vertical_forward_input2,HIGH);
+    digitalWrite(vertical_forward_input2,LOW);
 
     digitalWrite(vertical_rear_input1,LOW);
-    digitalWrite(vertical_rear_input2,HIGH);
+    digitalWrite(vertical_rear_input2,LOW);
 
   }
 }
@@ -232,6 +234,8 @@ void setup() {
   pinMode(vertical_rear_enablePin,OUTPUT);
   pinMode(vertical_rear_input1,OUTPUT);
   pinMode(vertical_rear_input2,OUTPUT);
+
+  pinMode(battery_voltage,INPUT);
 
 
     // configure LED PWM functionalitites
@@ -293,7 +297,7 @@ void setup() {
     SerialBT.println("add_text(12,1,xlarge,L,  Fuel,245,240,245,)");
     SerialBT.println("add_free_pad(13,4,0,100,0,100,R,)");
     SerialBT.println("add_free_pad(1,4,0,100,0,0,L,)");
-    SerialBT.println("add_gauge(10,2,4,0,100,0,F,,,10,5)");
+    SerialBT.println("add_gauge(10,2,4,0,100,0,F,0,5,10,5)");
     SerialBT.println("add_gauge(1,2,4,0,10,0,T,,,10,5)");
     SerialBT.println("set_panel_notes(,,,)");
     SerialBT.println("run()");
@@ -439,5 +443,15 @@ void loop() {
 
   moveBlimpHorizontal(horizontalSpeed,turn);
   moveBlimpVertical(verticalSpeed);
+
+  
+  voltage = analogRead(battery_voltage);
+  float voltageFloat = voltage * (3.3 / 4095);
+  String voltageToReport = "*F";
+  voltageToReport = voltageToReport + voltageFloat + "*";
+  SerialBT.println(voltageToReport);
+  Serial.println(voltageToReport);
+  voltageCounter = 0;
+  voltageCounter++;
 //  delay(20);
 }
