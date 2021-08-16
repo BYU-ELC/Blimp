@@ -9,6 +9,7 @@
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include "string.h"
+#include "math.h"
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -47,9 +48,9 @@ const int vertical_rear_input2 = 32;
 const int vertical_rear_pwmChannel = 3;
 
 //pin numbers for voltage detection
-const int battery_voltage = 26;
+const int battery_voltage = 36;
 int voltage = 0;
-int voltageCounter = 0;
+float voltageMovingAverage = 4.2;
 
 //pin numbers for accelerometer data
 
@@ -92,8 +93,8 @@ String code = "1234";
 // specific I2C addresses may be passed as a parameter here
 // AD0 low = 0x68 (default for InvenSense evaluation board)
 // AD0 high = 0x69
-MPU6050 accelgyro;
-//MPU6050 accelgyro(0x69); // <-- use for AD0 high
+//MPU6050 accelgyro;
+MPU6050 accelgyro(0x69); // <-- use for AD0 high
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
@@ -118,13 +119,10 @@ int16_t gx, gy, gz;
 //horizontalSpeed is the forward velocity of the blimp, an integer from -255-255
 //turn is the amount the vehichle will turn -255-255
 void moveBlimpHorizontal(int horizontalSpeed, int turn) {
-//  Serial.println("speed");
-//  Serial.println(horizontalSpeed);
-//  Serial.println("turn");
-//  Serial.println(turn);
 
-  int righthorizontalSpeed = horizontalSpeed + turn;
-  int lefthorizontalSpeed = horizontalSpeed - turn;
+  int righthorizontalSpeed = horizontalSpeed + turn/2;
+  int lefthorizontalSpeed = horizontalSpeed - turn/2;
+  
   if(lefthorizontalSpeed > 255) {
     lefthorizontalSpeed = 255;
   }
@@ -137,11 +135,9 @@ void moveBlimpHorizontal(int horizontalSpeed, int turn) {
     if(righthorizontalSpeed < -255) {
     righthorizontalSpeed = -255;
   }
-//  Serial.println("right speed");
-//  Serial.println(righthorizontalSpeed);
-//  Serial.println("left speed");
-//  Serial.println(lefthorizontalSpeed);
 
+  Serial.print("Right: "); Serial.println(righthorizontalSpeed);
+  Serial.print("Left: "); Serial.println(lefthorizontalSpeed);
   
   if(righthorizontalSpeed < 0 ) {
     digitalWrite(foward_right_input1,HIGH);
@@ -258,6 +254,14 @@ void setup() {
   //  bluetooth app setup
   while(!connectedFlag)
 {
+  voltage = analogRead(battery_voltage);
+  float voltageFloat = voltage * (6.6 / 4095);
+  String voltageToReport = "*F";
+  voltageToReport = voltageToReport + voltageFloat + "*";
+  SerialBT.println(voltageToReport);
+
+
+  
   SerialBT.println("*.kwl");
   SerialBT.println("clear_panel()");
   SerialBT.println("set_grid_size(17,8)");
@@ -297,8 +301,10 @@ void setup() {
     SerialBT.println("add_text(12,1,xlarge,L,  Fuel,245,240,245,)");
     SerialBT.println("add_free_pad(13,4,0,100,0,100,R,)");
     SerialBT.println("add_free_pad(1,4,0,100,0,0,L,)");
-    SerialBT.println("add_gauge(10,2,4,0,100,0,F,0,5,10,5)");
+    SerialBT.println("add_gauge(10,2,4,300,450,365,F,3,4.5,3,5)");
     SerialBT.println("add_gauge(1,2,4,0,10,0,T,,,10,5)");
+    SerialBT.println("add_text(8,5,xlarge,C,,245,0,0,E)");
+    SerialBT.println("add_xy_graph(7,0,3,-100.0,100.0,-100.0,100.0,5,H,,Pitch,Roll,0,0,0,0,1,1,0,0,0,none,large,1,1,42,97,222)");
     SerialBT.println("set_panel_notes(,,,)");
     SerialBT.println("run()");
     SerialBT.println("*");
@@ -415,43 +421,45 @@ void loop() {
   float axg,ayg,azg;
 
 
-  #ifdef OUTPUT_READABLE_ACCELGYRO
         // display tab-separated accel/gyro x/y/z values
-      axg = (5.9814*pow(10,-4)) * ax + 2.1984*pow(10,-16);
-      ayg = (5.9814*pow(10,-4)) * ay + 2.1984*pow(10,-16);
-      azg = (5.9814*pow(10,-4)) * az + 2.1984*pow(10,-16);
-      Serial.print("a/g:\t");
-      Serial.print(axg); Serial.print("\t");
-      Serial.print(ayg); Serial.print("\t");
-      Serial.print(azg); Serial.print("\t");
-      Serial.print(gx); Serial.print("\t");
-      Serial.print(gy); Serial.print("\t");
-      Serial.println(gz);
-  #endif
+  axg = (5.9814*pow(10,-4)) * ax + 2.1984*pow(10,-16);
+  ayg = (5.9814*pow(10,-4)) * ay + 2.1984*pow(10,-16);
+  azg = (5.9814*pow(10,-4)) * az + 2.1984*pow(10,-16);
+  Serial.print("a/g:\t");
+  Serial.print(axg); Serial.print("\t");
+  Serial.print(ayg); Serial.print("\t");
+  Serial.print(azg); Serial.print("\t");
+  Serial.print(gx); Serial.print("\t");
+  Serial.print(gy); Serial.print("\t");
+  Serial.println(gz);
 
-  #ifdef OUTPUT_BINARY_ACCELGYRO
-      Serial.write((uint8_t)(ax >> 8)); Serial.write((uint8_t)(ax & 0xFF));
-      Serial.write((uint8_t)(ay >> 8)); Serial.write((uint8_t)(ay & 0xFF));
-      Serial.write((uint8_t)(az >> 8)); Serial.write((uint8_t)(az & 0xFF));
-      Serial.write((uint8_t)(gx >> 8)); Serial.write((uint8_t)(gx & 0xFF));
-      Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
-      Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
-  #endif
+  float deltaP = acos(azg/11) * 180/3.14;
+  float deltaR = asin(axg/19.6) * 180/3.14;
 
-
-
+  Serial.print("Pitch: "); Serial.println(deltaP);
+  Serial.print("Roll: "); Serial.println(deltaR);
+  
+  String mpuData = "*HX";
+  mpuData = mpuData + deltaR + "Y" + deltaP + "*";
+  SerialBT.println(mpuData);
 
   moveBlimpHorizontal(horizontalSpeed,turn);
   moveBlimpVertical(verticalSpeed);
 
   
   voltage = analogRead(battery_voltage);
-  float voltageFloat = voltage * (3.3 / 4095);
+  float voltageFloat = (voltage * 660) / 4095;
+  voltageMovingAverage = (7 * voltageFloat + voltageMovingAverage)/8;
+  int voltageInt = round(voltageFloat) + 20;
   String voltageToReport = "*F";
-  voltageToReport = voltageToReport + voltageFloat + "*";
+  voltageToReport = voltageToReport + voltageInt + "*";
   SerialBT.println(voltageToReport);
-  Serial.println(voltageToReport);
-  voltageCounter = 0;
-  voltageCounter++;
+  if(voltageInt <= 340)
+  {
+    SerialBT.println("*ETime to Land*");
+  }
+  else{
+    SerialBT.println("*E*");
+  }
 //  delay(20);
 }
