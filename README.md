@@ -7,8 +7,7 @@ A helium balloon will keep the blimp suspended in air. This Bluetooth app will h
 
 
 This main  folder includes:
-
-The PCB Schematic File:     Blimp PCB v27.sch
-The PCB Board File:         Blimp_PCB_v50.brd
-The Laser cut vector file:  blimp_cut_v3.dxf
-The Arduino Code:           blimp.ino
+<br>The PCB Schematic File:     Blimp PCB v27.sch
+<br>The PCB Board File:         Blimp_PCB_v50.brd
+<br>The Laser cut vector file:  blimp_cut_v3.dxf
+<br>The Arduino Code:           blimp.ino
